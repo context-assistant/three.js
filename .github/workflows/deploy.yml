@@ -1,0 +1,73 @@
+name: Deploy to GitHub Pages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Install context-assistant dependencies
+        run: npm ci
+        working-directory: ./context-assistant
+
+      - name: Build three.js production
+        run: npm run build
+        working-directory: .
+
+      - name: Build context-assistant production
+        run: npm run build
+        working-directory: ./context-assistant
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+
+      - name: Copy three.js build files
+        run: |
+          mkdir -p ./context-assistant/dist
+          cp -r ./build ./context-assistant/dist/
+          cp -r ./editor ./context-assistant/dist/ || true
+          cp -r ./playground ./context-assistant/dist/ || true
+          cp -r ./manual ./context-assistant/dist/ || true
+          cp -r ./docs ./context-assistant/dist/ || true
+          cp -r ./files ./context-assistant/dist/ || true
+          cp -r ./examples ./context-assistant/dist/ || true
+          cp -r ./src ./context-assistant/dist/ || true
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: ./context-assistant/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+
