@@ -4,7 +4,7 @@ import { IframeManager } from '../services/IframeManager';
 import { IntegrationInjector } from '../services/IntegrationInjector';
 import { logger } from '../utils/logger';
 import { toast } from '../utils/toast';
-import type { ChatMessage } from '../types';
+import type { ChatMessage, SceneObject } from '../types';
 
 const PANEL_WIDTH_KEY = 'context-assistant-chat-panel-width';
 const DEFAULT_PANEL_WIDTH = 400;
@@ -566,15 +566,17 @@ export class ChatPanel {
         return;
       }
 
+      // Type assert to SceneObject[] for rendering
+      const sceneObjects = objects as SceneObject[];
       this.mentionMenuOpen = true;
-      this.renderMentionMenu(objects);
+      this.renderMentionMenu(sceneObjects);
     } catch (error) {
       logger.error('Failed to get scene objects:', error);
       toast.error('Failed to get scene objects. Make sure the Editor/Playground is loaded.');
     }
   }
 
-  private renderMentionMenu(objects: Array<{ name: string; type: string; id?: string; uuid?: string; children?: unknown[] }>): void {
+  private renderMentionMenu(objects: SceneObject[]): void {
     const inputContainer = document.querySelector('#chat-input')?.parentElement;
     if (!inputContainer) return;
 
@@ -685,30 +687,42 @@ export class ChatPanel {
     }
   }
 
-  private flattenObjects(objects: Array<{ name: string; type: string; id?: string; uuid?: string; children?: unknown[] }>, level: number = 0): Array<{ name: string; type: string; id?: string; uuid?: string; level: number }> {
-    const flattened: Array<{ name: string; type: string; id?: string; uuid?: string; level: number }> = [];
+  private flattenObjects(objects: unknown[], level: number = 0): Array<{ name: string; type: string; id?: string; uuid?: string; level: number; properties?: Record<string, unknown> }> {
+    const flattened: Array<{ name: string; type: string; id?: string; uuid?: string; level: number; properties?: Record<string, unknown> }> = [];
     
     objects.forEach(obj => {
-      const flatObj = { ...obj, level };
-      delete flatObj.children; // Remove children from flat object
-      flattened.push(flatObj);
-      
-      // Add children recursively
-      if (obj.children && obj.children.length > 0) {
-        flattened.push(...this.flattenObjects(obj.children, level + 1));
+      // Type guard to ensure object has required properties
+      if (obj && typeof obj === 'object' && 'name' in obj && 'type' in obj) {
+        const sceneObj = obj as SceneObject;
+        const flatObj: { name: string; type: string; id?: string; uuid?: string; level: number; properties?: Record<string, unknown> } = {
+          name: sceneObj.name,
+          type: sceneObj.type,
+          level,
+        };
+        
+        if (sceneObj.id) flatObj.id = sceneObj.id;
+        if (sceneObj.uuid) flatObj.uuid = sceneObj.uuid;
+        if (sceneObj.properties) flatObj.properties = sceneObj.properties;
+        
+        flattened.push(flatObj);
+        
+        // Add children recursively
+        if (sceneObj.children && sceneObj.children.length > 0) {
+          flattened.push(...this.flattenObjects(sceneObj.children, level + 1));
+        }
       }
     });
     
     return flattened;
   }
 
-  private renderObjectList(objects: Array<{ name: string; type: string; id?: string; uuid?: string; level?: number }>): string {
+  private renderObjectList(objects: SceneObject[]): string {
     if (objects.length === 0) {
       return '<div class="px-3 py-2 text-gray-400 text-sm">No objects found</div>';
     }
 
     // Flatten nested structure for display
-    const flattened = this.flattenObjects(objects);
+    const flattened = this.flattenObjects(objects as unknown[]);
 
     return flattened.map((obj, index) => {
       const displayName = obj.name || `Unnamed ${obj.type}`;
@@ -727,10 +741,10 @@ export class ChatPanel {
     }).join('');
   }
 
-  private filterObjects(objects: Array<{ name: string; type: string; children?: unknown[] }>, query: string): Array<{ name: string; type: string; children?: unknown[] }> {
+  private filterObjects(objects: SceneObject[], query: string): SceneObject[] {
     if (!query) return objects;
     
-    const searchInObject = (obj: { name?: string; type?: string; children?: unknown[] }): boolean => {
+    const searchInObject = (obj: SceneObject): boolean => {
       const nameMatch = (obj.name || '').toLowerCase().includes(query);
       const typeMatch = (obj.type || '').toLowerCase().includes(query);
       
@@ -740,27 +754,27 @@ export class ChatPanel {
       
       // Check children recursively
       if (obj.children && Array.isArray(obj.children) && obj.children.length > 0) {
-        return obj.children.some((child) => searchInObject(child as { name?: string; type?: string; children?: unknown[] }));
+        return obj.children.some((child) => searchInObject(child as SceneObject));
       }
       
       return false;
     };
 
-    const filterRecursive = (objList: Array<{ name: string; type: string; children?: unknown[] }>): Array<{ name: string; type: string; children?: unknown[] }> => {
-      const result: Array<{ name: string; type: string; children?: unknown[] }> = [];
+    const filterRecursive = (objList: SceneObject[]): SceneObject[] => {
+      const result: SceneObject[] = [];
       
       objList.forEach(obj => {
         const matches = searchInObject(obj);
         if (matches) {
           // Include object and filter its children
-          const filteredObj = { ...obj };
+          const filteredObj: SceneObject = { ...obj };
           if (obj.children && obj.children.length > 0) {
-            filteredObj.children = filterRecursive(obj.children);
+            filteredObj.children = filterRecursive(obj.children as SceneObject[]);
           }
           result.push(filteredObj);
         } else if (obj.children && obj.children.length > 0) {
           // Object doesn't match but might have matching children
-          const filteredChildren = filterRecursive(obj.children);
+          const filteredChildren = filterRecursive(obj.children as SceneObject[]);
           if (filteredChildren.length > 0) {
             result.push({ ...obj, children: filteredChildren });
           }

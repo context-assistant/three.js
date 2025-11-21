@@ -3,13 +3,12 @@ import { OllamaService } from '../services/OllamaService';
 import { AgentService } from '../services/AgentService';
 import { logger } from '../utils/logger';
 import { toast } from '../utils/toast';
-import type { AgentConfig } from '../types';
+import type { AgentConfig, PersonalityTraits } from '../types';
 
 export class SettingsView {
   private settingsService: SettingsService;
   private ollamaService: OllamaService;
   private agentService: AgentService;
-  private container: HTMLElement | null = null;
   private formListenersAttached: boolean = false;
   private savingAgent: boolean = false;
 
@@ -20,7 +19,6 @@ export class SettingsView {
   }
 
   render(container: HTMLElement): void {
-    this.container = container;
     container.innerHTML = this.getHTML();
     this.attachEventListeners();
     this.loadAgents();
@@ -113,7 +111,7 @@ export class SettingsView {
 
   private getAgentFormHTML(agent?: AgentConfig): string {
     const isEdit = !!agent;
-    const agentData = agent || {
+    const agentData: AgentConfig | { name: string; model: string; contextWindow: number; maxTokens: number; temperature: number; topK: number; topP: number; mirostat: false; mirostatTau: number; mirostatEta: number; personalityTraits: PersonalityTraits; avatar?: string } = agent || {
       name: '',
       model: '',
       contextWindow: 4096,
@@ -125,6 +123,7 @@ export class SettingsView {
       mirostatTau: 5.0,
       mirostatEta: 0.1,
       personalityTraits: {},
+      avatar: undefined,
     };
 
     return `
@@ -151,7 +150,7 @@ export class SettingsView {
             <label for="agent-avatar" class="block text-sm font-medium mb-2">Avatar</label>
             <div class="flex items-center gap-4">
               <div id="avatar-preview" class="w-16 h-16 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center overflow-hidden">
-                ${agentData.avatar ? `<img src="${agentData.avatar}" alt="Avatar" class="w-full h-full object-cover" />` : '<span class="text-gray-400">No image</span>'}
+                ${(agentData as AgentConfig).avatar ? `<img src="${(agentData as AgentConfig).avatar}" alt="Avatar" class="w-full h-full object-cover" />` : '<span class="text-gray-400">No image</span>'}
               </div>
               <div class="flex-1">
                 <input
@@ -283,7 +282,7 @@ export class SettingsView {
           <!-- Personality Traits -->
           <div>
             <h4 class="text-lg font-semibold mb-4">Personality Traits</h4>
-            ${this.getTraitSlidersHTML(agentData.personalityTraits)}
+            ${this.getTraitSlidersHTML(agentData.personalityTraits as Record<string, number>)}
           </div>
 
           <!-- Actions -->
