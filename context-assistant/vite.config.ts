@@ -142,6 +142,7 @@ function serveThreeJsStatic(): Plugin {
 }
 
 export default defineConfig({
+  base: process.env.NODE_ENV === 'production' ? '/three.js/' : '/',
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
