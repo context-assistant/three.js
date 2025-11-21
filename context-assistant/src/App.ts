@@ -109,15 +109,16 @@ export class App {
   }
 
   private renderView(): string {
+    const basePath = this.getBasePath();
     switch (this.currentView) {
       case 'editor':
-        return this.renderIframeView('editor', '/editor/index.html');
+        return this.renderIframeView('editor', `${basePath}/editor/index.html`);
       case 'playground':
-        return this.renderIframeView('playground', '/playground/index.html');
+        return this.renderIframeView('playground', `${basePath}/playground/index.html`);
       case 'manual':
-        return this.renderIframeView('manual', '/manual/index.html');
+        return this.renderIframeView('manual', `${basePath}/manual/index.html`);
       case 'docs':
-        return this.renderIframeView('docs', '/docs/index.html');
+        return this.renderIframeView('docs', `${basePath}/docs/index.html`);
       case 'settings':
         return this.renderSettingsView();
       default:
@@ -292,12 +293,24 @@ export class App {
     }
   }
 
+  private getBasePath(): string {
+    // Detect base path from current location
+    // In production on GitHub Pages, it will be /three.js/ or /three.js
+    // Locally, it will be /
+    const pathname = window.location.pathname;
+    if (pathname.startsWith('/three.js/') || pathname === '/three.js') {
+      return '/three.js';
+    }
+    return '';
+  }
+
   private async loadIframe(type: IframeType['type']): Promise<void> {
+    const basePath = this.getBasePath();
     const urls: Record<IframeType['type'], string> = {
-      editor: '/editor/index.html',
-      playground: '/playground/index.html',
-      manual: '/manual/index.html',
-      docs: '/docs/index.html',
+      editor: `${basePath}/editor/index.html`,
+      playground: `${basePath}/playground/index.html`,
+      manual: `${basePath}/manual/index.html`,
+      docs: `${basePath}/docs/index.html`,
     };
 
     const url = urls[type];
