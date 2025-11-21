@@ -64,7 +64,7 @@ jobs:
 
       - name: Copy three.js build files
         run: |
-          mkdir -p _site/
+          mv ./context-assistant/dist _site
           cp -r ./build _site/
           cp -r ./editor _site/
           cp -r ./playground _site/
