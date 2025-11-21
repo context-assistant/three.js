@@ -6,6 +6,7 @@ import { ChatPanel } from './components/ChatPanel';
 import { ChatService } from './services/ChatService';
 import { AgentService } from './services/AgentService';
 import { logger } from './utils/logger';
+import { analytics } from './utils/analytics';
 import type { IframeType } from './types';
 
 export class App {
@@ -31,6 +32,11 @@ export class App {
     this.setupEventListeners();
     this.setupRouting();
     this.setupChatClickOutside();
+    
+    // Track initial page view
+    const initialView = this.getViewFromUrl();
+    const pageTitle = initialView.charAt(0).toUpperCase() + initialView.slice(1);
+    analytics.trackPageView(`/${initialView}`, pageTitle);
     
     // Load initial view from URL
     this.loadViewFromUrl();
@@ -279,6 +285,10 @@ export class App {
         const hash = view === 'home' ? '' : `#${view}`;
         window.location.hash = hash;
       }
+      
+      // Track page view
+      const pageTitle = view.charAt(0).toUpperCase() + view.slice(1);
+      analytics.trackPageView(`/${view}`, pageTitle);
       
       // Load iframe if needed
       if (['editor', 'playground', 'manual', 'docs'].includes(view)) {

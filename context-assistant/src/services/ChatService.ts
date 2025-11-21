@@ -2,6 +2,7 @@ import { OllamaService } from './OllamaService';
 import { AgentService } from './AgentService';
 import { SettingsService } from './SettingsService';
 import { logger } from '../utils/logger';
+import { analytics } from '../utils/analytics';
 import type { ChatMessage, AgentConfig } from '../types';
 
 const CHAT_HISTORY_KEY = 'context-assistant-chat-history';
@@ -76,6 +77,16 @@ export class ChatService {
 
     // Update the user message content with enhanced version
     userMessage.content = enhancedContent;
+
+    // Track send-prompt event
+    analytics.trackEvent('send-prompt', {
+      agent_id: agent.id,
+      agent_name: agent.name,
+      model: agent.model,
+      has_mentioned_objects: mentionedObjects && mentionedObjects.length > 0,
+      mentioned_objects_count: mentionedObjects?.length || 0,
+      message_length: content.length,
+    });
 
     // Prepare messages for Ollama (use enhanced content)
     const recentMessages = this.getRecentMessages();
@@ -152,6 +163,37 @@ export class ChatService {
                   }
                 }
                 if (json.done) {
+                  // Track prompt-stats event with token statistics
+                  const stats: Record<string, unknown> = {
+                    agent_id: agent.id,
+                    agent_name: agent.name,
+                    model: agent.model,
+                  };
+                  
+                  // Add token statistics if available
+                  if (json.prompt_eval_count !== undefined) {
+                    stats.prompt_eval_count = json.prompt_eval_count;
+                  }
+                  if (json.eval_count !== undefined) {
+                    stats.eval_count = json.eval_count;
+                  }
+                  if (json.total_duration !== undefined) {
+                    stats.total_duration = json.total_duration;
+                  }
+                  if (json.load_duration !== undefined) {
+                    stats.load_duration = json.load_duration;
+                  }
+                  if (json.prompt_eval_duration !== undefined) {
+                    stats.prompt_eval_duration = json.prompt_eval_duration;
+                  }
+                  if (json.eval_duration !== undefined) {
+                    stats.eval_duration = json.eval_duration;
+                  }
+                  if (json.eval_count !== undefined && json.prompt_eval_count !== undefined) {
+                    stats.total_tokens = (json.eval_count as number) + (json.prompt_eval_count as number);
+                  }
+                  
+                  analytics.trackEvent('prompt-stats', stats);
                   break;
                 }
               } catch (e) {
