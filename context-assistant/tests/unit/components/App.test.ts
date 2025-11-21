@@ -18,10 +18,11 @@ describe('App', () => {
     container.id = 'app';
     document.body.appendChild(container);
     
-    // Mock window.location.hash
+    // Mock window.location with both hash and pathname
     Object.defineProperty(window, 'location', {
       value: {
         hash: '',
+        pathname: '/',
       },
       writable: true,
       configurable: true,
@@ -205,6 +206,101 @@ describe('App', () => {
       
       const mainContent = document.getElementById('main-content');
       expect(mainContent?.innerHTML).toContain('iframe-container-playground');
+    });
+  });
+
+  describe('getBasePath', () => {
+    beforeEach(() => {
+      // Reset location before each test - will be set in individual tests
+      delete (window as any).location;
+    });
+
+    it('should return empty string for local development path', () => {
+      // Mock local development path
+      Object.defineProperty(window, 'location', {
+        value: {
+          pathname: '/',
+          hash: '',
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      app.init();
+      const editorLink = document.querySelector('[data-view="editor"]');
+      if (editorLink) {
+        (editorLink as HTMLElement).click();
+      }
+      
+      // Should use local path (no /three.js prefix)
+      const mainContent = document.getElementById('main-content');
+      expect(mainContent?.innerHTML).toContain('iframe-container-editor');
+    });
+
+    it('should return /three.js for production GitHub Pages path', () => {
+      // Mock production GitHub Pages path
+      Object.defineProperty(window, 'location', {
+        value: {
+          pathname: '/three.js/',
+          hash: '',
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      app.init();
+      const editorLink = document.querySelector('[data-view="editor"]');
+      if (editorLink) {
+        (editorLink as HTMLElement).click();
+      }
+      
+      // Should use production path with /three.js prefix
+      const mainContent = document.getElementById('main-content');
+      expect(mainContent?.innerHTML).toContain('iframe-container-editor');
+    });
+
+    it('should return /three.js for production path without trailing slash', () => {
+      // Mock production GitHub Pages path without trailing slash
+      Object.defineProperty(window, 'location', {
+        value: {
+          pathname: '/three.js',
+          hash: '',
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      app.init();
+      const editorLink = document.querySelector('[data-view="editor"]');
+      if (editorLink) {
+        (editorLink as HTMLElement).click();
+      }
+      
+      // Should use production path with /three.js prefix
+      const mainContent = document.getElementById('main-content');
+      expect(mainContent?.innerHTML).toContain('iframe-container-editor');
+    });
+
+    it('should handle nested production paths', () => {
+      // Mock production GitHub Pages path with nested route
+      Object.defineProperty(window, 'location', {
+        value: {
+          pathname: '/three.js/editor',
+          hash: '',
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      app.init();
+      const editorLink = document.querySelector('[data-view="editor"]');
+      if (editorLink) {
+        (editorLink as HTMLElement).click();
+      }
+      
+      // Should use production path with /three.js prefix
+      const mainContent = document.getElementById('main-content');
+      expect(mainContent?.innerHTML).toContain('iframe-container-editor');
     });
   });
 });

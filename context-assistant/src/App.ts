@@ -307,7 +307,7 @@ export class App {
     // Detect base path from current location
     // In production on GitHub Pages, it will be /three.js/ or /three.js
     // Locally, it will be /
-    const pathname = window.location.pathname;
+    const pathname = window.location?.pathname || '/';
     if (pathname.startsWith('/three.js/') || pathname === '/three.js') {
       return '/three.js';
     }
