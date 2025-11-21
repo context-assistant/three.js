@@ -18,6 +18,13 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
 
     steps:
       - name: Checkout code
@@ -57,22 +64,24 @@ jobs:
 
       - name: Copy three.js build files
         run: |
-          mkdir -p ./context-assistant/dist
-          cp -r ./build ./context-assistant/dist/
-          cp -r ./editor ./context-assistant/dist/ || true
-          cp -r ./playground ./context-assistant/dist/ || true
-          cp -r ./manual ./context-assistant/dist/ || true
-          cp -r ./docs ./context-assistant/dist/ || true
-          cp -r ./files ./context-assistant/dist/ || true
-          cp -r ./examples ./context-assistant/dist/ || true
-          cp -r ./src ./context-assistant/dist/ || true
+          mkdir -p _site/
+          cp -r ./build _site/
+          cp -r ./editor _site/
+          cp -r ./playground _site/
+          cp -r ./manual _site/
+          cp -r ./docs _site/
+          cp -r ./files _site/
+          cp -r ./examples _site/
+          cp -r ./src _site/
 
-      - name: Upload artifact
+      - name: Upload Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./context-assistant/dist
+          path: '_site'
 
       - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: deployment
-        uses: actions/deploy-pages@v3
+        uses: actions/deploy-pages@v4
 
