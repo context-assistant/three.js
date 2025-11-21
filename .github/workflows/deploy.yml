@@ -62,9 +62,13 @@ jobs:
           echo "GITHUB_SHA: ${{ github.sha }}"
           echo "GITHUB_REPOSITORY: ${{ github.repository }}"
 
-      - name: Copy three.js build files
+      - name: Copy context-assistant and three.js build files
         run: |
+          echo "Deleting _site directory"
+          rm -rf _site
+          echo "Copying context-assistant/dist to _site"
           cp -r ./context-assistant/dist _site
+          echo "Copying three.js files to _site"
           cp -r ./build _site/
           cp -r ./editor _site/
           cp -r ./playground _site/
@@ -73,6 +77,13 @@ jobs:
           cp -r ./files _site/
           cp -r ./examples _site/
           cp -r ./src _site/
+          echo "Build structure:"
+          ls -la _site/
+          if [ -d "_site/assets" ]; then
+            echo "✓ Assets folder found in _site/"
+          else
+            echo "✗ WARNING: Assets folder NOT found in _site/"
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
